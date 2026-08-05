@@ -1,68 +1,165 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+
+interface DatosAlbaran {
+  numeroAlbaran: string;
+  fecha: string;
+  remitente: string;
+  destinatario: string;
+  origen: string;
+  destino: string;
+  bultos: number;
+  pesoKg: number;
+  precioTotal: number;
+}
 
 export default function Home() {
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [resultado, setResultado] = useState<DatosAlbaran | null>(null);
+
+  const handleProcesar = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) return;
+    setLoading(true);
+
+    setTimeout(() => {
+      setLoading(false);
+      setResultado({
+        numeroAlbaran: 'ALB-2026-8891',
+        fecha: '05/08/2026',
+        remitente: 'Transportes TransEspuña S.L.',
+        destinatario: 'Distribuciones Levante',
+        origen: 'Murcia',
+        destino: 'Barcelona',
+        bultos: 12,
+        pesoKg: 450.5,
+        precioTotal: 620.00,
+      });
+    }, 1200);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center">
+      {/* Header Corporativo */}
+      <header className="w-full border-b border-slate-800 bg-slate-900/50">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <span className="font-bold tracking-tight text-lg text-white">LogiData</span>
+            <span className="text-[11px] uppercase tracking-wider bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700">
+              Enterprise
+            </span>
+          </div>
+          <div className="text-xs text-slate-400">
+            Soporte técnico
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="w-full max-w-4xl px-6 py-12 flex flex-col gap-8">
+        
+        {/* Título de la herramienta */}
+        <div>
+          <h1 className="text-2xl font-semibold text-white mb-1">
+            Extracción de Albaranes de Transporte
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-sm text-slate-400">
+            Carga de documentos escaneados para conversión estructurada en hoja de cálculo.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Panel de Carga */}
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-6">
+          <form onSubmit={handleProcesar} className="flex flex-col gap-4">
+            
+            <div className="border border-dashed border-slate-700 hover:border-slate-500 rounded bg-slate-950/50 p-8 text-center transition-colors">
+              <input
+                id="file-upload"
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
+              <label htmlFor="file-upload" className="cursor-pointer block">
+                <span className="text-sm font-medium text-slate-200 underline underline-offset-4">
+                  Seleccionar documento PDF o imagen
+                </span>
+                <span className="text-xs text-slate-500 block mt-1">
+                  Formatos admitidos: PDF, PNG, JPG (Máx. 10MB)
+                </span>
+              </label>
+            </div>
+
+            {file && (
+              <div className="flex justify-between items-center bg-slate-800/50 border border-slate-700/50 px-4 py-2 rounded text-xs">
+                <span className="text-slate-300 font-mono">{file.name}</span>
+                <span className="text-slate-500">{(file.size / 1024).toFixed(1)} KB</span>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={!file || loading}
+                className="bg-slate-100 hover:bg-white text-slate-900 text-xs font-semibold px-4 py-2.5 rounded transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Procesando archivo...' : 'Procesar documento'}
+              </button>
+            </div>
+          </form>
         </div>
+
+        {/* Tabla Sobria de Resultados */}
+        {resultado && (
+          <div className="bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+              <h2 className="text-sm font-medium text-slate-200">
+                Resultado de extracción
+              </h2>
+              <button
+                onClick={() => alert('Descarga de Excel')}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded border border-slate-700 transition-colors"
+              >
+                Exportar a Excel (.xlsx)
+              </button>
+            </div>
+
+            <table className="w-full text-left text-xs text-slate-300">
+              <tbody className="divide-y divide-slate-800">
+                <tr>
+                  <td className="px-6 py-3 font-medium text-slate-500 bg-slate-950/30 w-1/3">Nº Albarán</td>
+                  <td className="px-6 py-3 font-mono">{resultado.numeroAlbaran}</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-3 font-medium text-slate-500 bg-slate-950/30">Fecha</td>
+                  <td className="px-6 py-3">{resultado.fecha}</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-3 font-medium text-slate-500 bg-slate-950/30">Remitente</td>
+                  <td className="px-6 py-3">{resultado.remitente}</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-3 font-medium text-slate-500 bg-slate-950/30">Destinatario</td>
+                  <td className="px-6 py-3">{resultado.destinatario}</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-3 font-medium text-slate-500 bg-slate-950/30">Origen / Destino</td>
+                  <td className="px-6 py-3">{resultado.origen} ➔ {resultado.destino}</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-3 font-medium text-slate-500 bg-slate-950/30">Bultos / Peso</td>
+                  <td className="px-6 py-3">{resultado.bultos} bultos ({resultado.pesoKg} kg)</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-3 font-medium text-slate-500 bg-slate-950/30">Importe Total</td>
+                  <td className="px-6 py-3 font-semibold text-slate-100">{resultado.precioTotal.toFixed(2)} €</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
     </div>
   );
