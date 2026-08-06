@@ -30,8 +30,9 @@ export default function Home() {
       } else {
         setResponse(data.result);
       }
-    } catch (err: any) {
-      setError('Error de conexión con el servidor');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error de conexión con el servidor';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

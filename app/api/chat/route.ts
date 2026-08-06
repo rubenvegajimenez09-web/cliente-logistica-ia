@@ -61,10 +61,11 @@ export async function POST(req: Request) {
       'No se pudo generar respuesta.';
 
     return NextResponse.json({ result: respuestaIA });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Error interno desconocido';
     console.error('Error en servidor:', error);
     return NextResponse.json(
-      { error: `Error interno: ${error.message}` },
+      { error: `Error interno: ${errorMessage}` },
       { status: 500 }
     );
   }
