@@ -4,15 +4,17 @@ import { useState } from 'react';
 
 export default function Home() {
   const [input, setInput] = useState('');
-  const [respuesta, setRespuesta] = useState('');
-  const [cargando, setCargando] = useState(false);
+  const [response, setResponse] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const enviarConsulta = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    setCargando(true);
-    setRespuesta('');
+    setLoading(true);
+    setResponse('');
+    setError('');
 
     try {
       const res = await fetch('/api/chat', {
@@ -22,46 +24,54 @@ export default function Home() {
       });
 
       const data = await res.json();
-      if (res.ok) {
-        setRespuesta(data.result);
+
+      if (!res.ok) {
+        setError(data.error || 'Ocurrió un error inesperado');
       } else {
-        setRespuesta(`Error: ${data.error}`);
+        setResponse(data.result);
       }
-    } catch (err) {
-      setRespuesta('Error de conexión con el servidor.');
+    } catch (err: any) {
+      setError('Error de conexión con el servidor');
     } finally {
-      setCargando(false);
+      setLoading(false);
     }
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-slate-900 text-white">
-      <div className="w-full max-w-xl space-y-6">
-        <h1 className="text-3xl font-bold text-center">
-          Cliente Logística IA
+    <main className="min-h-screen bg-slate-900 text-white p-8 flex flex-col items-center justify-center">
+      <div className="max-w-2xl w-full bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700">
+        <h1 className="text-2xl font-bold mb-4 text-blue-400">
+          Asistente de Logística e IA
         </h1>
 
-        <form onSubmit={enviarConsulta} className="space-y-4">
-          <input
-            type="text"
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe tu consulta de logística..."
-            className="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Escribe tu consulta sobre logística o transporte aquí..."
+            className="w-full p-3 rounded-lg bg-slate-700 text-white placeholder-slate-400 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 h-28 resize-none"
           />
+
           <button
             type="submit"
-            disabled={cargando}
-            className="w-full bg-blue-600 hover:bg-blue-700 font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50"
+            disabled={loading}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold transition-colors disabled:opacity-50"
           >
-            {cargando ? 'Procesando...' : 'Enviar a la IA'}
+            {loading ? 'Procesando con la IA...' : 'Enviar a la IA'}
           </button>
         </form>
 
-        {respuesta && (
-          <div className="p-4 rounded-lg bg-slate-800 border border-slate-700">
-            <h2 className="text-sm font-semibold text-slate-400 mb-1">Respuesta:</h2>
-            <p className="text-slate-200">{respuesta}</p>
+        {error && (
+          <div className="mt-6 p-4 bg-red-900/50 border border-red-500 rounded-lg text-red-200">
+            <strong>Respuesta:</strong>
+            <p className="mt-1">{error}</p>
+          </div>
+        )}
+
+        {response && (
+          <div className="mt-6 p-4 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-100 whitespace-pre-line">
+            <strong>Respuesta de la IA:</strong>
+            <p className="mt-2 text-slate-200 leading-relaxed">{response}</p>
           </div>
         )}
       </div>
