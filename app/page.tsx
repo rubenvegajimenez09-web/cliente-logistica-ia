@@ -1,14 +1,31 @@
 'use client';
 
 import { useState } from 'react';
+import * as XLSX from 'xlsx';
+
+// Definición de tipos estrictos sin 'any'
+type ExcelRow = Record<string, unknown>;
 
 export default function Home() {
+  // Estado para la IA
   const [input, setInput] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Estados para el Procesador de Excel
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [excelStats, setExcelStats] = useState<{
+    originalRows: number;
+    cleanedRows: number;
+    removedDuplicates: number;
+    fileName: string;
+  } | null>(null);
+  const [cleanedData, setCleanedData] = useState<ExcelRow[] | null>(null);
+
+  // Manejador para la IA
+  const handleSubmitIA = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
@@ -39,14 +56,78 @@ export default function Home() {
     }
   };
 
+  // Manejador para el archivo Excel/CSV
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setExcelFile(file);
+      setExcelStats(null);
+      setCleanedData(null);
+    }
+  };
+
+  const processExcel = () => {
+    if (!excelFile) return;
+    setIsProcessing(true);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const buffer = e.target?.result as ArrayBuffer;
+        if (!buffer) return;
+
+        const data = new Uint8Array(buffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        // Convertir a JSON con tipo estricto
+        const jsonData = XLSX.utils.sheet_to_json<ExcelRow>(worksheet, { defval: '' });
+        const totalRows = jsonData.length;
+
+        // Eliminar duplicados exactos
+        const uniqueData = jsonData.filter((row, index, self) =>
+          index === self.findIndex((t) => JSON.stringify(t) === JSON.stringify(row))
+        );
+
+        const cleanedRowsCount = uniqueData.length;
+        const duplicatesCount = totalRows - cleanedRowsCount;
+
+        setCleanedData(uniqueData);
+        setExcelStats({
+          originalRows: totalRows,
+          cleanedRows: cleanedRowsCount,
+          removedDuplicates: duplicatesCount,
+          fileName: excelFile.name.replace(/\.[^/.]+$/, '') + '_optimizado.xlsx',
+        });
+      } catch {
+        alert('Error al leer el archivo. Asegúrate de subir un .xlsx o .csv válido.');
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+
+    reader.readAsArrayBuffer(excelFile);
+  };
+
+  const downloadCleanedFile = () => {
+    if (!cleanedData || !excelStats) return;
+
+    const worksheet = XLSX.utils.json_to_sheet(cleanedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Datos Limpios');
+
+    XLSX.writeFile(workbook, excelStats.fileName);
+  };
+
   return (
     <div className="min-h-screen bg-[#0B0F17] text-slate-100 font-sans antialiased selection:bg-blue-500 selection:text-white">
-      {/* Background Subtle Glow / Gradient (Efecto SaaS Premium) */}
+      {/* Background Subtle Glow */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[10%] left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-gradient-to-b from-blue-600/15 via-indigo-600/5 to-transparent blur-[120px] rounded-full" />
       </div>
 
-      {/* Navbar Minimalista estilo SaaS */}
+      {/* Navbar Minimalista */}
       <header className="relative z-10 border-b border-slate-800/80 bg-[#0B0F17]/80 backdrop-blur-xl sticky top-0 px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -68,8 +149,6 @@ export default function Home() {
 
       {/* Hero Section */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-16 space-y-12">
-        
-        {/* Header Title */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-blue-400 border border-slate-700/60 shadow-inner">
             ✨ Plataforma Integral de Logística
@@ -78,11 +157,11 @@ export default function Home() {
             Control Operativo y <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">Optimización Inteligente</span>
           </h1>
           <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-            Centraliza la gestión de tu flota, optimiza datos masivos en Excel y consulta decisiones estratégicas en tiempo real.
+            Centraliza la gestión de tu flota, procesa datos masivos de inventario y consulta decisiones estratégicas en tiempo real.
           </p>
         </div>
 
-        {/* Bento Grid Layout (Las 4 Cajitas / Módulos) */}
+        {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
           {/* CAJA 1: Optimización de Transporte (PREVIEW) */}
@@ -102,8 +181,7 @@ export default function Home() {
               </p>
             </div>
             
-            {/* Mock Dashboard UI Preview */}
-            <div className="bg-[#080B11] border border-slate-800/80 rounded-xl p-3 space-y-2 opacity-70 group-hover:opacity-90 transition-opacity">
+            <div className="bg-[#080B11] border border-slate-800/80 rounded-xl p-3 space-y-2 opacity-70">
               <div className="flex justify-between items-center text-xs text-slate-400">
                 <span>Ruta M-40 / A-2</span>
                 <span className="text-emerald-400 font-mono font-medium">-18% Tiempos</span>
@@ -114,28 +192,74 @@ export default function Home() {
             </div>
           </div>
 
-          {/* CAJA 2: Compresor & Procesador Excel (PREVIEW) */}
-          <div className="relative group bg-slate-900/60 border border-slate-800 hover:border-slate-700 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-lg backdrop-blur-sm">
+          {/* CAJA 2: PROCESADOR Y COMPRESOR EXCEL (FUNCIONAL) */}
+          <div className="relative group bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-500/50 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-xl backdrop-blur-sm">
             <div className="absolute top-4 right-4">
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 bg-slate-800 text-slate-400 rounded-md border border-slate-700/50">
-                Próximamente
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-md border border-emerald-500/20">
+                Módulo Activo
               </span>
             </div>
             <div>
               <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 mb-4 border border-emerald-500/20">
                 📊
               </div>
-              <h3 className="text-lg font-semibold text-white mb-1">Procesador & Compresor Excel</h3>
-              <p className="text-slate-400 text-xs leading-relaxed mb-6">
-                Limpia, comprime y normaliza grandes hojas de cálculo de manifiestos y stock en segundos.
+              <h3 className="text-lg font-semibold text-white mb-1">Procesador Excel / CSV</h3>
+              <p className="text-slate-400 text-xs leading-relaxed mb-4">
+                Sube tu plantilla de manifiesto o inventario para eliminar duplicados y estructurar los datos automáticamente.
               </p>
+
+              {/* Zona de Carga de Archivo */}
+              <div className="space-y-3">
+                <input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleFileUpload}
+                  id="excel-upload"
+                  className="hidden"
+                />
+                <label
+                  htmlFor="excel-upload"
+                  className="border border-dashed border-slate-700 hover:border-emerald-500/50 bg-[#080B11] rounded-xl p-3 text-center block cursor-pointer transition-colors"
+                >
+                  <span className="text-xs text-slate-300 font-medium block truncate">
+                    {excelFile ? `📄 ${excelFile.name}` : 'Haz clic para seleccionar .xlsx o .csv'}
+                  </span>
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
+                    Procesamiento local 100% seguro
+                  </span>
+                </label>
+
+                {excelFile && !excelStats && (
+                  <button
+                    onClick={processExcel}
+                    disabled={isProcessing}
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition-colors flex justify-center items-center gap-2 cursor-pointer"
+                  >
+                    {isProcessing ? 'Procesando filas...' : 'Optimizar y Limpiar Archivo'}
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Mock File Dropzone Preview */}
-            <div className="border border-dashed border-slate-700 bg-[#080B11]/60 rounded-xl p-4 text-center opacity-70 group-hover:opacity-90 transition-opacity">
-              <span className="text-xs text-slate-400 block font-medium">Arrastra tus archivos .xlsx o .csv</span>
-              <span className="text-[10px] text-slate-500 block mt-0.5">Compresión sin pérdida de datos</span>
-            </div>
+            {/* Resultado del procesamiento */}
+            {excelStats && (
+              <div className="bg-[#080B11] border border-emerald-500/30 rounded-xl p-3 space-y-2 mt-4">
+                <div className="text-xs font-semibold text-emerald-400 flex items-center justify-between">
+                  <span>✅ Optimización Lista</span>
+                  <span className="text-[10px] text-slate-400">{excelStats.cleanedRows} filas</span>
+                </div>
+                <div className="text-[11px] text-slate-400 space-y-1">
+                  <p>• Filas originales: <span className="text-slate-200">{excelStats.originalRows}</span></p>
+                  <p>• Duplicados eliminados: <span className="text-emerald-400">{excelStats.removedDuplicates}</span></p>
+                </div>
+                <button
+                  onClick={downloadCleanedFile}
+                  className="w-full mt-2 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  📥 Descargar Archivo Optimizado
+                </button>
+              </div>
+            )}
           </div>
 
           {/* CAJA 3: Agenda Logística Operativa (PREVIEW) */}
@@ -155,8 +279,7 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Mock Calendar Slots Preview */}
-            <div className="bg-[#080B11] border border-slate-800/80 rounded-xl p-3 space-y-2 opacity-70 group-hover:opacity-90 transition-opacity">
+            <div className="bg-[#080B11] border border-slate-800/80 rounded-xl p-3 space-y-2 opacity-70">
               <div className="flex items-center justify-between text-xs text-slate-300 bg-slate-800/40 p-1.5 rounded border border-slate-800">
                 <span className="font-mono text-purple-400">09:30</span>
                 <span className="truncate max-w-[120px] text-slate-400">Muelle 04 - Reagrupación</span>
@@ -165,9 +288,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* CAJA 4: MÓDULO IA ACTIVO (Acupa 3 columnas abajo) */}
+          {/* CAJA 4: MÓDULO IA ACTIVO */}
           <div className="lg:col-span-3 bg-gradient-to-b from-slate-900/90 to-slate-900/50 border border-blue-500/30 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
-            {/* Glow decorativo interno */}
             <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
 
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 border-b border-slate-800 pb-5">
@@ -185,8 +307,7 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Formulario e Interacción con la IA */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmitIA} className="space-y-4">
               <div className="relative">
                 <textarea
                   value={input}
@@ -219,7 +340,6 @@ export default function Home() {
               </div>
             </form>
 
-            {/* Error Display */}
             {error && (
               <div className="mt-6 p-4 bg-rose-950/40 border border-rose-800/60 rounded-xl text-rose-300 text-xs sm:text-sm">
                 <strong className="font-semibold block mb-1">Aviso del sistema:</strong>
@@ -227,7 +347,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* AI Response Display */}
             {response && (
               <div className="mt-6 p-6 bg-[#080B11] border border-slate-800 rounded-xl space-y-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-blue-400">
@@ -243,7 +362,6 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Footer Minimalista estilo SaaS */}
       <footer className="border-t border-slate-800/60 py-8 text-center text-xs text-slate-500">
         <p>© 2026 LogiOS Platform. Todos los derechos reservados.</p>
       </footer>
